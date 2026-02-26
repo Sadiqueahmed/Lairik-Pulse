@@ -1,0 +1,82 @@
+# Lairik-Pulse Mesh Network Bootstrap Configuration
+# For Manipur Recovery Context - Offline-First Mesh
+
+network:
+  name: lairik-pulse-mesh
+  version: "1.0.0"
+  region: manipur
+  
+  # Bootstrap nodes for initial peer discovery
+  bootstrap_peers:
+    - id: 12D3KooWExampleBootstrapNode1
+      address: /dns4/bootstrap1.lairik.local/tcp/10000
+      region: imphal-east
+    - id: 12D3KooWExampleBootstrapNode2
+      address: /dns4/bootstrap2.lairik.local/tcp/10000
+      region: imphal-west
+  
+  # Protocol configuration
+  protocols:
+    - /lairik/pulse/1.0.0
+    - /ipfs/id/1.0.0
+    - /ipfs/kad/1.0.0
+  
+  # Discovery mechanisms
+  discovery:
+    mdns:
+      enabled: true
+      interval: 30  # seconds
+    dht:
+      enabled: true
+      mode: client  # or 'server' for bootstrap nodes
+    rendezvous:
+      enabled: true
+      string: "lairik-pulse-manipur-2024"
+
+# Security settings
+security:
+  # Noise protocol for encrypted peer communication
+  noise:
+    enabled: true
+    protocol: Noise_XX_25519_ChaChaPoly_BLAKE2b
+  
+  # Private network protection
+  private_network:
+    enabled: true
+    # Swarm key for private network (generate with: ipfs key gen)
+    swarm_key: "/key/swarm/psk/1.0.0/\n/base16/\n<your-generated-key-here>"
+
+# Resource limits
+resources:
+  max_connections: 100
+  max_peers: 50
+  connection_timeout: 30  # seconds
+  
+# Message routing
+routing:
+  # GossipSub for efficient message broadcasting
+  gossipsub:
+    enabled: true
+    heartbeat_interval: 1  # second
+    history_length: 5
+    history_gossip: 3
+  
+  # Direct message TTL
+  message_ttl: 300  # seconds
+
+# Regional settings for Manipur
+regional:
+  primary_language: "meiteilon"
+  supported_languages:
+    - "meiteilon"
+    - "english"
+    - "hindi"
+  
+  # Emergency contact nodes
+  emergency_nodes:
+    - name: "Relief Camp Alpha"
+      location: "Imphal East"
+      peer_id: "12D3KooWEmergencyNode1"
+    - name: "Relief Camp Beta"
+      location: "Imphal West"
+      peer_id: "12D3KooWEmergencyNode2"
