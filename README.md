@@ -86,7 +86,7 @@ Manipur, a state in Northeast India, faces unique challenges:
 
 ### System Flow
 
-```mermaid
+```
 ┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
 │  User Uploads   │────▶│  Document Vault  │────▶│  ZKP Generation │
 │    Document     │     │  (Encrypted)     │     │  (Proof Created)│
