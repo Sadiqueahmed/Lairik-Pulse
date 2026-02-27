@@ -431,8 +431,8 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 For questions or support:
 
-- 📧 Email: [your-email@example.com]
-- 🐦 Twitter: [@your_handle]
+- 📧 Email: [sadiqueahmed40@gmail.com](mailto:sadiqueahmed40@gmail.com)
+- 🌐 Portfolio: [https://sadique-ahmed.netlify.app/](https://sadique-ahmed.netlify.app/)
 - 💬 Discord: [Join our community]
 
 ---
