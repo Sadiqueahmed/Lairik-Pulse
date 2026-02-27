@@ -4,8 +4,9 @@ import { useState, useCallback } from 'react';
 import { useVault } from '@/hooks/useVault';
 
 export function VaultUploader() {
-  const { documents, addDocument, removeDocument, isLoading } = useVault();
+  const { documents, addDocument, removeDocument, viewDocument, downloadDocument, isLoading } = useVault();
   const [isDragging, setIsDragging] = useState(false);
+  const [viewingDoc, setViewingDoc] = useState<{ id: string; name: string; content: string; type: string } | null>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -17,26 +18,41 @@ export function VaultUploader() {
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     
     const files = Array.from(e.dataTransfer.files);
-    files.forEach(file => {
+    for (const file of files) {
       if (file.type === 'application/pdf' || file.type.startsWith('image/')) {
-        addDocument(file);
+        await addDocument(file);
       }
-    });
-  }, [addDocument]);
-
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files) {
-      Array.from(files).forEach(file => {
-        addDocument(file);
-      });
     }
   }, [addDocument]);
+
+  const handleFileInput = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      for (const file of Array.from(files)) {
+        await addDocument(file);
+      }
+    }
+  }, [addDocument]);
+
+  const handleView = async (doc: { id: string; name: string; type: string }) => {
+    const content = await viewDocument(doc.id);
+    if (content) {
+      setViewingDoc({ ...doc, content });
+    }
+  };
+
+  const handleDownload = async (doc: { id: string; name: string }) => {
+    await downloadDocument(doc.id, doc.name);
+  };
+
+  const closeViewer = () => {
+    setViewingDoc(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -141,9 +157,35 @@ export function VaultUploader() {
                   <span className="manipur-badge text-[10px]">
                     {doc.verified ? '✓ Verified' : 'Pending'}
                   </span>
+                  
+                  {/* View Button */}
+                  <button
+                    onClick={() => handleView(doc)}
+                    className="p-2 text-[#0f4c3a]/40 hover:text-[#d4af37] hover:bg-[#d4af37]/10 rounded-lg transition-all"
+                    title="View document"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  </button>
+
+                  {/* Download Button */}
+                  <button
+                    onClick={() => handleDownload(doc)}
+                    className="p-2 text-[#0f4c3a]/40 hover:text-[#0f4c3a] hover:bg-[#0f4c3a]/10 rounded-lg transition-all"
+                    title="Download document"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                  </button>
+
+                  {/* Delete Button */}
                   <button
                     onClick={() => removeDocument(doc.id)}
                     className="p-2 text-[#0f4c3a]/40 hover:text-[#c41e3a] hover:bg-[#c41e3a]/10 rounded-lg transition-all"
+                    title="Delete document"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -161,6 +203,50 @@ export function VaultUploader() {
           <div className="manipur-divider mb-6" />
           <p className="text-sm">No documents yet. Upload your first document above.</p>
           <p className="text-xs mt-2">Documents are encrypted and stored locally on your device.</p>
+        </div>
+      )}
+
+      {/* Document Viewer Modal */}
+      {viewingDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="manipur-card w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-[#0f4c3a]/10">
+              <h3 className="font-semibold text-[#0f4c3a] truncate">{viewingDoc.name}</h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownload(viewingDoc)}
+                  className="manipur-button-primary text-sm py-2 px-4"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </button>
+                <button
+                  onClick={closeViewer}
+                  className="p-2 text-[#0f4c3a]/60 hover:text-[#c41e3a] hover:bg-[#c41e3a]/10 rounded-lg transition-all"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-auto p-4 bg-[#0f4c3a]/5">
+              {viewingDoc.type.startsWith('image/') ? (
+                <img 
+                  src={viewingDoc.content} 
+                  alt={viewingDoc.name}
+                  className="max-w-full h-auto mx-auto rounded-lg shadow-lg"
+                />
+              ) : (
+                <iframe
+                  src={viewingDoc.content}
+                  className="w-full h-[70vh] rounded-lg"
+                  title={viewingDoc.name}
+                />
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
