@@ -17,7 +17,7 @@ interface ProfileEditorProps {
   onCancel: () => void;
 }
 
-export function ProfileEditor({ initialData, onCancel }: ProfileEditorProps) {
+export function ProfileEditor({ initialData, onSave, onCancel }: ProfileEditorProps) {
   const [formData, setFormData] = useState<ProfileFormData>({
     name: initialData?.name || '',
     email: initialData?.email || '',
@@ -29,7 +29,7 @@ export function ProfileEditor({ initialData, onCancel }: ProfileEditorProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // onSave(formData);
+    onSave(formData);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

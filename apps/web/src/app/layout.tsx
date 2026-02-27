@@ -1,12 +1,16 @@
 import type { Metadata, Viewport } from 'next';
+import { Inter } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import './globals.css';
 
+const inter = Inter({ subsets: ['latin'] });
+
 export const metadata: Metadata = {
-  title: 'ꯂꯥꯏꯔꯤꯛ-ꯄꯨꯜꯁ | Lairik-Pulse',
+  title: 'ꯂꯥꯏꯔꯤꯛ-ꯄꯨꯜꯁ | Lairik Pulse',
   description: 'Offline-Mesh Verification & Recovery for Manipur',
   manifest: '/manifest.json',
   icons: {
-    icon: '/icon-192x192.png',
+    icon: '/favicon.ico',
     apple: '/icon-192x192.png',
   },
 };
@@ -25,30 +29,36 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <head>
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Meetei+Mayek&display=swap"
-          rel="stylesheet"
-        />
-      </head>
-      <body className="font-sans antialiased min-h-screen">
-        {/* Decorative top border */}
-        <div className="h-1 bg-gradient-to-r from-[#0f4c3a] via-[#d4af37] to-[#c41e3a]" />
-        
-        {children}
-        
-        {/* Footer with cultural elements */}
-        <footer className="mt-auto py-6 text-center text-[#0f4c3a]/60 text-sm">
-          <div className="flex items-center justify-center gap-2 mb-2">
-            <span className="w-8 h-px bg-[#d4af37]" />
-            <span className="text-[#d4af37]">꯫</span>
-            <span className="w-8 h-px bg-[#d4af37]" />
-          </div>
-          <p>ꯂꯥꯏꯔꯤꯛ-ꯄꯨꯜꯁ • Built for Manipur&apos;s Recovery</p>
-          <p className="mt-1 text-xs">Offline • Private • Resilient</p>
-        </footer>
-      </body>
-    </html>
+    <ClerkProvider
+      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      appearance={{
+        variables: {
+          colorPrimary: '#0f4c3a',
+          colorText: '#1a1a1a',
+          colorBackground: '#ffffff',
+          colorInputBackground: '#f8f9f5',
+          colorInputText: '#1a1a1a',
+          colorDanger: '#c41e3a',
+          borderRadius: '0.5rem',
+        },
+        elements: {
+          formButtonPrimary: 'bg-[#0f4c3a] hover:bg-[#0a3d2e] text-white',
+          card: 'bg-white shadow-lg border-l-4 border-[#d4af37]',
+          headerTitle: 'text-[#0f4c3a] font-bold',
+          headerSubtitle: 'text-[#d4af37]',
+          socialButtonsBlockButton: 'border-2 border-[#0f4c3a] hover:bg-[#0f4c3a]/5',
+          socialButtonsBlockButtonText: 'text-[#0f4c3a] font-medium',
+          formFieldLabel: 'text-[#0f4c3a] font-medium',
+          formFieldInput: 'border-gray-300 focus:border-[#0f4c3a] focus:ring-[#0f4c3a]',
+          footerActionLink: 'text-[#d4af37] hover:text-[#b8941f]',
+          identityPreviewText: 'text-[#0f4c3a]',
+          identityPreviewEditButton: 'text-[#d4af37] hover:text-[#b8941f]',
+        },
+      }}
+    >
+      <html lang="en">
+        <body className={inter.className}>{children}</body>
+      </html>
+    </ClerkProvider>
   );
 }
