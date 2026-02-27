@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { SignInButton, useAuth } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
+import { Logo, LogoIcon } from '../ui/Logo';
 
 export function LandingPage() {
   const { isSignedIn, isLoaded } = useAuth();
@@ -66,34 +67,9 @@ export function LandingPage() {
       </div>
 
       {/* Header */}
-      <header className="px-4 sm:px-6 py-4 sm:py-6 border-b border-[#0f4c3a]/10 relative z-10">
+      <header className="px-4 sm:px-6 py-4 sm:py-6 border-b border-[#0f4c3a]/10 relative z-10 bg-gradient-to-r from-[#0f4c3a]/5 via-[#fafaf8] to-[#0f4c3a]/5">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2 sm:space-x-3">
-            {/* Beautiful Logo */}
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-[#0f4c3a] to-[#1a5c4a] rounded-xl flex items-center justify-center shadow-lg transition-transform duration-300 hover:scale-105 hover:rotate-3">
-              <svg viewBox="0 0 40 40" className="w-6 h-6 sm:w-7 sm:h-7">
-                {/* Stylized LP monogram with Manipur-inspired design */}
-                <defs>
-                  <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#d4af37"/>
-                    <stop offset="100%" stopColor="#f4d03f"/>
-                  </linearGradient>
-                </defs>
-                {/* Outer circle representing unity */}
-                <circle cx="20" cy="20" r="18" fill="none" stroke="url(#logoGrad)" strokeWidth="2"/>
-                {/* L shape */}
-                <path d="M12 12 L12 28 L20 28" fill="none" stroke="url(#logoGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                {/* P shape */}
-                <path d="M22 12 L22 28 M22 12 L28 12 Q32 12 32 16 Q32 20 28 20 L22 20" fill="none" stroke="url(#logoGrad)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
-                {/* Decorative dot representing Manipur */}
-                <circle cx="20" cy="32" r="2" fill="#c41e3a"/>
-              </svg>
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-[#0f4c3a]">ꯂꯥꯏꯔꯤꯛ-ꯄꯨꯜꯁ</h1>
-              <p className="text-xs text-[#d4af37] font-medium tracking-wider">Lairik Pulse</p>
-            </div>
-          </div>
+          <Logo size="md" />
           
           <SignInButton mode="modal">
             <button className="text-[#0f4c3a] hover:text-[#d4af37] font-medium transition-colors duration-300 text-sm sm:text-base">
@@ -191,17 +167,7 @@ export function LandingPage() {
       {/* Footer */}
       <footer className="px-4 sm:px-6 py-6 sm:py-8 border-t border-gray-200 mt-12 sm:mt-20 relative z-10 bg-white/50 backdrop-blur-sm">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gradient-to-br from-[#0f4c3a] to-[#1a5c4a] rounded-lg flex items-center justify-center shadow-md">
-              <svg viewBox="0 0 40 40" className="w-5 h-5 sm:w-6 sm:h-6">
-                <circle cx="20" cy="20" r="16" fill="none" stroke="#d4af37" strokeWidth="2"/>
-                <path d="M14 14 L14 26 L20 26" fill="none" stroke="#d4af37" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <path d="M22 14 L22 26 M22 14 L26 14 Q29 14 29 17 Q29 20 26 20 L22 20" fill="none" stroke="#d4af37" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
-                <circle cx="20" cy="30" r="1.5" fill="#c41e3a"/>
-              </svg>
-            </div>
-            <span className="font-semibold text-[#0f4c3a] text-sm sm:text-base">ꯂꯥꯏꯔꯤꯛ-ꯄꯨꯜꯁ</span>
-          </div>
+          <LogoIcon size="sm" showText={true} />
           
           <div className="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-6 text-xs sm:text-sm text-gray-500">
             <span>© 2024 Sadique Ahmed</span>

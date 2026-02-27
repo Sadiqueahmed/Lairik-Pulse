@@ -3,7 +3,7 @@
 import { useP2P } from '@/hooks/useP2P';
 
 export function MeshStatus() {
-  const { isConnected, peers, nodeId } = useP2P();
+  const { isConnected, peers, nodeId, isLoading, error, refreshPeers } = useP2P();
 
   return (
     <div className="space-y-6">
@@ -25,9 +25,11 @@ export function MeshStatus() {
           <div className={`px-4 py-2 rounded-full text-sm font-medium ${
             isConnected 
               ? 'bg-green-100 text-green-700 border border-green-300' 
-              : 'bg-amber-100 text-amber-700 border border-amber-300'
+              : isLoading
+              ? 'bg-amber-100 text-amber-700 border border-amber-300'
+              : 'bg-red-100 text-red-700 border border-red-300'
           }`}>
-            {isConnected ? '● Connected' : '○ Connecting...'}
+            {isLoading ? '⟳ Connecting...' : isConnected ? '● Connected' : '○ Disconnected'}
           </div>
         </div>
 
@@ -56,9 +58,36 @@ export function MeshStatus() {
             <span className="text-sm font-medium text-[#0f4c3a]">Your Node ID</span>
           </div>
           <code className="text-xs text-[#0f4c3a]/70 bg-white/50 px-2 py-1 rounded block break-all">
-            {nodeId}
+            {nodeId || 'Connecting...'}
           </code>
         </div>
+
+        {/* Refresh Button */}
+        <button
+          onClick={refreshPeers}
+          disabled={isLoading}
+          className="mt-4 w-full py-2 px-4 bg-[#0f4c3a]/10 hover:bg-[#0f4c3a]/20 text-[#0f4c3a] rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          <svg className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {isLoading ? 'Refreshing...' : 'Refresh Peers'}
+        </button>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-sm text-red-600 flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {error.message}
+            </p>
+            <p className="text-xs text-red-500 mt-1">
+              Using demo mode - Go backend not running
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Peers List */}
@@ -103,7 +132,7 @@ export function MeshStatus() {
         </div>
       )}
 
-      {peers.length === 0 && (
+      {peers.length === 0 && !isLoading && (
         <div className="manipur-card p-8 text-center">
           <div className="manipur-icon-circle mx-auto mb-4">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
