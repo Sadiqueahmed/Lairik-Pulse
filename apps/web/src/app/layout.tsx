@@ -30,7 +30,9 @@ export default function RootLayout({
 }) {
   return (
     <ClerkProvider
-      publishableKey={process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      publishableKey="pk_test_Y3JlYXRpdmUtbGFiLTczLmNsZXJrLmFjY291bnRzLmRldiQ"
+      signUpForceRedirectUrl="/dashboard"
+      signInForceRedirectUrl="/dashboard"
       appearance={{
         variables: {
           colorPrimary: '#0f4c3a',
