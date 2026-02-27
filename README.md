@@ -1,13 +1,30 @@
-# 🌿 Lairik-Pulse (ꯂꯥꯏꯔꯤꯛ-ꯄꯨꯜꯁ)
+<div align="center">
 
-> **Offline-First Recovery Platform for Manipur**  
-> Secure document verification using Zero-Knowledge Proofs and peer-to-peer mesh networking.
+# 🌿 Lairik-Pulse 
+## ꯂꯥꯏꯔꯤꯛ-ꯄꯨꯜꯁ
 
-[![Vercel](https://img.shields.io/badge/Vercel-Deployed-black?style=flat&logo=vercel)](https://lairik-pulse.vercel.app)
-[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=flat&logo=go)](https://golang.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-14.2-000000?style=flat&logo=next.js)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+**Offline-First Recovery Platform for Manipur**  
+*Secure document verification using Zero-Knowledge Proofs and peer-to-peer mesh networking*
+
+[![Vercel](https://img.shields.io/badge/Vercel-Live%20Demo-black?style=for-the-badge&logo=vercel)](https://lairik-pulse.vercel.app)
+[![Go](https://img.shields.io/badge/Go-1.21+-00ADD8?style=for-the-badge&logo=go)](https://golang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14.2-000000?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
+[![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
+
+</div>
+
+---
+
+<div align="center">
+
+### 🖥️ Live Application Preview
+
+[![Lairik-Pulse Screenshot](https://v1.screenshot.11ty.dev/https%3A%2F%2Flairik-pulse.vercel.app%2F/opengraph/_2024_01_01)](https://lairik-pulse.vercel.app)
+
+*☝️ Click the image to visit the live site. Screenshot auto-updates with every deployment.*
+
+</div>
 
 ---
 
