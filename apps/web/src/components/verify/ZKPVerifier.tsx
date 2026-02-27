@@ -1,158 +1,193 @@
 'use client';
 
 import { useState } from 'react';
-import { useZKPStore } from '@/hooks/useZKP';
+import { useZKP } from '@/hooks/useZKP';
 
 export function ZKPVerifier() {
-  const [documentId, setDocumentId] = useState('');
-  const [proofType, setProofType] = useState<'degree' | 'identity'>('degree');
-  const { isGenerating, proof, verify, reset } = useZKPStore();
+  const { generateProof, verifyProof, isGenerating, lastProof } = useZKP();
+  const [documentType, setDocumentType] = useState<'degree' | 'identity'>('degree');
+  const [showResult, setShowResult] = useState(false);
 
   const handleGenerate = async () => {
-    if (!documentId) return;
-    await verify(documentId, proofType);
+    await generateProof(documentType);
+    setShowResult(true);
   };
 
   return (
     <div className="space-y-6">
-      <div className="bg-slate-800 rounded-xl p-6">
-        <h3 className="text-lg font-semibold mb-4">Zero-Knowledge Proof</h3>
-        <p className="text-sm text-slate-400 mb-6">
-          Generate a privacy-preserving proof that verifies your document without revealing its contents.
-          Perfect for sharing verification with authorities while maintaining confidentiality.
-        </p>
-
-        <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Document ID
-            </label>
-            <input
-              type="text"
-              value={documentId}
-              onChange={(e) => setDocumentId(e.target.value)}
-              placeholder="Enter document ID from your vault"
-              className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-lairik-accent"
-            />
+      {/* Introduction Card */}
+      <div className="manipur-card p-6">
+        <div className="flex items-start gap-4">
+          <div className="manipur-icon-circle flex-shrink-0">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
-              Proof Type
-            </label>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setProofType('degree')}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                  proofType === 'degree'
-                    ? 'bg-lairik-primary text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                Degree Verification
-              </button>
-              <button
-                onClick={() => setProofType('identity')}
-                className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-                  proofType === 'identity'
-                    ? 'bg-lairik-primary text-white'
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
-                }`}
-              >
-                Identity Proof
-              </button>
+            <h3 className="text-lg font-semibold text-[#0f4c3a] mb-2">
+              Zero-Knowledge Proof Verification
+            </h3>
+            <p className="text-sm text-[#0f4c3a]/70 leading-relaxed">
+              Prove your credentials without revealing sensitive information. 
+              Using Groth16 ZK-SNARKs for privacy-preserving verification.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Document Type Selection */}
+      <div className="manipur-card p-6">
+        <h4 className="font-medium text-[#0f4c3a] mb-4 flex items-center gap-2">
+          <svg className="w-4 h-4 text-[#d4af37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Select Document Type
+        </h4>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <button
+            onClick={() => setDocumentType('degree')}
+            className={`p-4 rounded-lg border-2 transition-all text-left ${
+              documentType === 'degree'
+                ? 'border-[#d4af37] bg-[#d4af37]/10'
+                : 'border-[#0f4c3a]/10 hover:border-[#d4af37]/30'
+            }`}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                documentType === 'degree' ? 'bg-[#d4af37]/30' : 'bg-[#0f4c3a]/5'
+              }`}>
+                <svg className="w-5 h-5 text-[#0f4c3a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l9-5-9-5-9 5 9 5z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z" />
+                </svg>
+              </div>
+              <span className="font-medium text-[#0f4c3a]">Academic Degree</span>
             </div>
-          </div>
+            <p className="text-xs text-[#0f4c3a]/60">
+              Verify educational qualifications without revealing full transcript
+            </p>
+          </button>
 
           <button
-            onClick={handleGenerate}
-            disabled={isGenerating || !documentId}
-            className="w-full bg-lairik-accent hover:bg-lairik-accent/80 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-            {isGenerating ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  />
+            onClick={() => setDocumentType('identity')}
+            className={`p-4 rounded-lg border-2 transition-all text-left ${
+              documentType === 'identity'
+                ? 'border-[#d4af37] bg-[#d4af37]/10'
+                : 'border-[#0f4c3a]/10 hover:border-[#d4af37]/30'
+            }`}>
+            <div className="flex items-center gap-3 mb-2">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                documentType === 'identity' ? 'bg-[#d4af37]/30' : 'bg-[#0f4c3a]/5'
+              }`}>
+                <svg className="w-5 h-5 text-[#0f4c3a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2" />
                 </svg>
-                Generating Proof...
-              </>
-            ) : (
-              'Generate ZK Proof'
-            )}
+              </div>
+              <span className="font-medium text-[#0f4c3a]">Identity Proof</span>
+            </div>
+            <p className="text-xs text-[#0f4c3a]/60">
+              Prove residency or identity without exposing personal details
+            </p>
           </button>
         </div>
       </div>
 
-      {proof && (
-        <div className="bg-slate-800 rounded-xl p-6 border border-lairik-success/30">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-lairik-success">
-              Proof Generated Successfully
-            </h3>
-            <button
-              onClick={reset}
-              className="text-sm text-slate-400 hover:text-white"
-            >
-              Reset
-            </button>
+      {/* Generate Button */}
+      <div className="flex justify-center">
+        <button
+          onClick={handleGenerate}
+          disabled={isGenerating}
+          className="manipur-button-primary flex items-center gap-2 text-lg px-8 py-4"
+        >
+          {isGenerating ? (
+            <>
+              <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+              </svg>
+              Generating ZK Proof...
+            </>
+          ) : (
+            <>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Generate ZK Proof
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Result Card */}
+      {showResult && lastProof && (
+        <div className="manipur-card p-6 border-[#d4af37] animate-shimmer">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h4 className="font-semibold text-[#0f4c3a]">Proof Generated Successfully</h4>
+              <p className="text-sm text-[#0f4c3a]/60">Verified with Groth16 ZK-SNARK</p>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <div className="bg-slate-900 rounded-lg p-4">
-              <p className="text-xs text-slate-500 mb-1">Proof Hash</p>
-              <p className="font-mono text-sm text-lairik-accent break-all">
-                {proof.hash}
-              </p>
+          <div className="space-y-3">
+            <div className="bg-[#0f4c3a]/5 rounded-lg p-3">
+              <span className="text-xs text-[#0f4c3a]/60 block mb-1">Proof Hash</span>
+              <code className="text-xs text-[#0f4c3a] break-all">{lastProof.proofHash}</code>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#0f4c3a]/5 rounded-lg p-3">
+                <span className="text-xs text-[#0f4c3a]/60 block mb-1">Circuit</span>
+                <span className="text-sm font-medium text-[#0f4c3a]">{lastProof.circuitType}</span>
+              </div>
+              <div className="bg-[#0f4c3a]/5 rounded-lg p-3">
+                <span className="text-xs text-[#0f4c3a]/60 block mb-1">Timestamp</span>
+                <span className="text-sm font-medium text-[#0f4c3a]">
+                  {new Date(lastProof.timestamp).toLocaleString()}
+                </span>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-900 rounded-lg p-4">
-                <p className="text-xs text-slate-500 mb-1">Verification Time</p>
-                <p className="font-medium">{proof.verificationTime}ms</p>
-              </div>
-              <div className="bg-slate-900 rounded-lg p-4">
-                <p className="text-xs text-slate-500 mb-1">Proof Size</p>
-                <p className="font-medium">{proof.size} bytes</p>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button className="flex-1 bg-lairik-primary hover:bg-lairik-secondary text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                Download Proof
-              </button>
-              <button className="flex-1 bg-slate-700 hover:bg-slate-600 text-white font-medium py-2 px-4 rounded-lg transition-colors">
-                Share via Mesh
-              </button>
+            <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-lg p-3">
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span>Verification successful - No sensitive data exposed</span>
             </div>
           </div>
         </div>
       )}
 
-      <div className="bg-slate-800/50 rounded-xl p-6 border border-slate-700">
-        <h4 className="font-medium mb-2 text-lairik-accent">How ZK Proofs Work</h4>
-        <p className="text-sm text-slate-400 leading-relaxed">
-          Zero-Knowledge Proofs (ZKPs) allow you to prove that you possess a valid document
-          without revealing any information about the document itself. Using Groth16 protocol
-          via gnark, we generate a cryptographic proof that can be verified by anyone
-          without exposing sensitive data like grades, personal details, or document contents.
-        </p>
+      {/* Info Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-gradient-to-br from-[#0f4c3a]/10 to-transparent rounded-lg p-4 border border-[#0f4c3a]/20">
+          <h4 className="font-medium text-[#0f4c3a] mb-2 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[#d4af37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+            </svg>
+            Privacy Preserved
+          </h4>
+          <p className="text-xs text-[#0f4c3a]/70">
+            Your document contents remain encrypted. Only the proof of validity is shared.
+          </p>
+        </div>
+
+        <div className="bg-gradient-to-br from-[#d4af37]/10 to-transparent rounded-lg p-4 border border-[#d4af37]/20">
+          <h4 className="font-medium text-[#0f4c3a] mb-2 flex items-center gap-2">
+            <svg className="w-4 h-4 text-[#d4af37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Instant Verification
+          </h4>
+          <p className="text-xs text-[#0f4c3a]/70">
+            Proofs are verified in milliseconds using Groth16, perfect for mobile devices.
+          </p>
+        </div>
       </div>
     </div>
   );

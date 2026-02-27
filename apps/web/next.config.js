@@ -12,7 +12,7 @@ const withPWA = require('next-pwa')({
         cacheName: 'offlineCache',
         expiration: {
           maxEntries: 200,
-          maxAgeSeconds: 24 * 60 * 60, // 24 hours
+          maxAgeSeconds: 24 * 60 * 60,
         },
       },
     },
@@ -22,13 +22,8 @@ const withPWA = require('next-pwa')({
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  async rewrites() {
-    return [
-      {
-        source: '/api/node/:path*',
-        destination: 'http://localhost:8080/:path*',
-      },
-    ];
+  images: {
+    unoptimized: true,
   },
 };
 

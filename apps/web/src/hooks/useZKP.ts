@@ -1,47 +1,52 @@
-import { create } from 'zustand';
+import { useState, useCallback } from 'react';
 
-interface Proof {
-  hash: string;
-  type: 'degree' | 'identity';
+export interface ZKProof {
+  proofHash: string;
+  circuitType: string;
   timestamp: number;
-  verificationTime: number;
-  size: number;
+  verified: boolean;
 }
 
-interface ZKPState {
+export interface UseZKPReturn {
+  generateProof: (type: 'degree' | 'identity') => Promise<void>;
+  verifyProof: (proof: ZKProof) => Promise<boolean>;
   isGenerating: boolean;
-  proof: Proof | null;
-  verify: (documentId: string, type: 'degree' | 'identity') => Promise<void>;
-  reset: () => void;
+  lastProof: ZKProof | null;
 }
 
-export const useZKPStore = create<ZKPState>((set) => ({
-  isGenerating: false,
-  proof: null,
+export function useZKP(): UseZKPReturn {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [lastProof, setLastProof] = useState<ZKProof | null>(null);
 
-  verify: async (documentId: string, type: 'degree' | 'identity') => {
-    set({ isGenerating: true });
-
-    // Simulate ZKP generation
-    // In real implementation, this would:
-    // 1. Call Go backend via gRPC/WebSocket
-    // 2. Use gnark to generate proof
-    // 3. Return proof hash and metadata
+  const generateProof = useCallback(async (type: 'degree' | 'identity') => {
+    setIsGenerating(true);
     
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const mockProof: Proof = {
-      hash: `0x${Array.from(crypto.getRandomValues(new Uint8Array(32)))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('')}`,
-      type,
+    // Simulate ZK proof generation
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const proof: ZKProof = {
+      proofHash: '0x' + Array.from({ length: 64 }, () => 
+        Math.floor(Math.random() * 16).toString(16)
+      ).join(''),
+      circuitType: type === 'degree' ? 'DegreeVerification' : 'IdentityProof',
       timestamp: Date.now(),
-      verificationTime: 1245,
-      size: 192,
+      verified: true,
     };
+    
+    setLastProof(proof);
+    setIsGenerating(false);
+  }, []);
 
-    set({ isGenerating: false, proof: mockProof });
-  },
+  const verifyProof = useCallback(async (proof: ZKProof): Promise<boolean> => {
+    // Simulate verification
+    await new Promise(resolve => setTimeout(resolve, 500));
+    return proof.verified;
+  }, []);
 
-  reset: () => set({ proof: null, isGenerating: false }),
-}));
+  return {
+    generateProof,
+    verifyProof,
+    isGenerating,
+    lastProof,
+  };
+}

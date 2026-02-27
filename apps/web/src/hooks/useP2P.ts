@@ -1,56 +1,47 @@
-import { create } from 'zustand';
+import { useState, useEffect } from 'react';
 
-interface Peer {
+export interface Peer {
   id: string;
-  name: string;
-  status: 'active' | 'inactive';
-  lastSeen: number;
+  address: string;
+  connected: boolean;
 }
 
-interface P2PState {
+export interface UseP2PReturn {
   isConnected: boolean;
-  nodeId: string | null;
   peers: Peer[];
-  connect: () => Promise<void>;
-  disconnect: () => Promise<void>;
-  addPeer: (peer: Peer) => void;
-  removePeer: (id: string) => void;
-  updatePeerStatus: (id: string, status: Peer['status']) => void;
+  nodeId: string;
 }
 
-export const useP2PStore = create<P2PState>((set) => ({
-  isConnected: false,
-  nodeId: null,
-  peers: [],
+export function useP2P(): UseP2PReturn {
+  const [isConnected, setIsConnected] = useState(false);
+  const [peers, setPeers] = useState<Peer[]>([]);
+  const [nodeId, setNodeId] = useState('');
 
-  connect: async () => {
-    // Simulate connection to local Go node
-    set({ isConnected: true, nodeId: `node-${crypto.randomUUID().slice(0, 8)}` });
-    
-    // In real implementation, this would:
-    // 1. Connect to local Go node via WebSocket/gRPC
-    // 2. Initialize libp2p node
-    // 3. Start mDNS/DHT discovery
-  },
+  useEffect(() => {
+    // Simulate P2P connection
+    setTimeout(() => {
+      setIsConnected(true);
+      setNodeId('12D3KooW' + Math.random().toString(36).substring(2, 15));
+      
+      // Add mock peers
+      setPeers([
+        {
+          id: '12D3KooWMockPeer1',
+          address: '/ip4/192.168.1.101/tcp/4001',
+          connected: true,
+        },
+        {
+          id: '12D3KooWMockPeer2',
+          address: '/ip4/192.168.1.102/tcp/4001',
+          connected: true,
+        },
+      ]);
+    }, 2000);
+  }, []);
 
-  disconnect: async () => {
-    set({ isConnected: false, nodeId: null, peers: [] });
-  },
-
-  addPeer: (peer) =>
-    set((state) => ({
-      peers: [...state.peers.filter((p) => p.id !== peer.id), peer],
-    })),
-
-  removePeer: (id) =>
-    set((state) => ({
-      peers: state.peers.filter((p) => p.id !== id),
-    })),
-
-  updatePeerStatus: (id, status) =>
-    set((state) => ({
-      peers: state.peers.map((p) =>
-        p.id === id ? { ...p, status, lastSeen: Date.now() } : p
-      ),
-    })),
-}));
+  return {
+    isConnected,
+    peers,
+    nodeId,
+  };
+}

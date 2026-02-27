@@ -3,31 +3,117 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
+  --manipur-green: #0f4c3a;
+  --manipur-gold: #d4af37;
+  --manipur-red: #c41e3a;
+  --manipur-cream: #f5f5dc;
+  --manipur-blue: #4682b4;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-[#f5f5dc] via-white to-[#0f4c3a]/5;
+    background-attachment: fixed;
   }
 }
 
-body {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))
-    )
-    rgb(var(--background-start-rgb));
+@layer components {
+  .manipur-card {
+    @apply bg-white/90 backdrop-blur-sm rounded-xl shadow-lg border border-[#d4af37]/20;
+    @apply hover:shadow-xl transition-all duration-300;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d4af37' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  .manipur-button-primary {
+    @apply bg-gradient-to-r from-[#0f4c3a] to-[#0f4c3a]/80;
+    @apply text-white font-semibold px-6 py-3 rounded-lg;
+    @apply hover:from-[#0f4c3a]/90 hover:to-[#0f4c3a]/70;
+    @apply active:scale-95 transition-all duration-200;
+    @apply shadow-lg shadow-[#0f4c3a]/30;
+    @apply border border-[#d4af37]/30;
+  }
+
+  .manipur-button-secondary {
+    @apply bg-gradient-to-r from-[#d4af37] to-[#d4af37]/80;
+    @apply text-[#0f4c3a] font-semibold px-6 py-3 rounded-lg;
+    @apply hover:from-[#d4af37]/90 hover:to-[#d4af37]/70;
+    @apply active:scale-95 transition-all duration-200;
+    @apply shadow-lg shadow-[#d4af37]/30;
+  }
+
+  .manipur-header {
+    @apply bg-gradient-to-r from-[#0f4c3a] via-[#0f4c3a]/95 to-[#0f4c3a];
+    @apply text-white shadow-xl;
+    border-bottom: 3px solid #d4af37;
+  }
+
+  .manipur-tab {
+    @apply px-4 py-2 rounded-t-lg font-medium transition-all duration-200;
+    @apply text-[#0f4c3a]/70 hover:text-[#0f4c3a] hover:bg-[#d4af37]/10;
+  }
+
+  .manipur-tab-active {
+    @apply bg-[#d4af37]/20 text-[#0f4c3a] border-b-2 border-[#d4af37];
+  }
+
+  .manipur-input {
+    @apply w-full px-4 py-3 rounded-lg border-2 border-[#0f4c3a]/20;
+    @apply focus:border-[#d4af37] focus:ring-2 focus:ring-[#d4af37]/20;
+    @apply bg-white/80 backdrop-blur-sm transition-all duration-200;
+  }
+
+  .manipur-badge {
+    @apply px-3 py-1 rounded-full text-xs font-semibold;
+    @apply bg-[#d4af37]/20 text-[#0f4c3a] border border-[#d4af37]/30;
+  }
+
+  .manipur-divider {
+    @apply h-px bg-gradient-to-r from-transparent via-[#d4af37]/50 to-transparent my-4;
+  }
+
+  .manipur-icon-circle {
+    @apply w-12 h-12 rounded-full flex items-center justify-center;
+    @apply bg-gradient-to-br from-[#d4af37]/20 to-[#d4af37]/5;
+    @apply border-2 border-[#d4af37]/30 text-[#0f4c3a];
+  }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
-  }
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f5f5dc;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4af37;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #0f4c3a;
+}
+
+/* Animations */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.1), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+@keyframes pulse-gold {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+  50% { box-shadow: 0 0 0 10px rgba(212, 175, 55, 0); }
+}
+
+.animate-pulse-gold {
+  animation: pulse-gold 2s infinite;
 }

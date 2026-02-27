@@ -1,46 +1,53 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { useState, useCallback } from 'react';
 
 export interface Document {
   id: string;
   name: string;
   type: string;
   size: number;
-  content: string;
   timestamp: number;
-  cid: string | null;
+  verified: boolean;
+  cid?: string;
 }
 
-interface VaultState {
+export interface UseVaultReturn {
   documents: Document[];
-  addDocument: (doc: Document) => void;
+  addDocument: (file: File) => void;
   removeDocument: (id: string) => void;
-  updateDocumentCid: (id: string, cid: string) => void;
-  getDocumentById: (id: string) => Document | undefined;
+  isLoading: boolean;
 }
 
-export const useVaultStore = create<VaultState>()(
-  persist(
-    (set, get) => ({
-      documents: [],
-      addDocument: (doc) =>
-        set((state) => ({
-          documents: [...state.documents, doc],
-        })),
-      removeDocument: (id) =>
-        set((state) => ({
-          documents: state.documents.filter((d) => d.id !== id),
-        })),
-      updateDocumentCid: (id, cid) =>
-        set((state) => ({
-          documents: state.documents.map((d) =>
-            d.id === id ? { ...d, cid } : d
-          ),
-        })),
-      getDocumentById: (id) => get().documents.find((d) => d.id === id),
-    }),
-    {
-      name: 'lairik-vault',
-    }
-  )
-);
+export function useVault(): UseVaultReturn {
+  const [documents, setDocuments] = useState<Document[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const addDocument = useCallback((file: File) => {
+    setIsLoading(true);
+    
+    // Simulate processing
+    setTimeout(() => {
+      const newDoc: Document = {
+        id: Math.random().toString(36).substring(7),
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        timestamp: Date.now(),
+        verified: false,
+      };
+      
+      setDocuments(prev => [...prev, newDoc]);
+      setIsLoading(false);
+    }, 500);
+  }, []);
+
+  const removeDocument = useCallback((id: string) => {
+    setDocuments(prev => prev.filter(doc => doc.id !== id));
+  }, []);
+
+  return {
+    documents,
+    addDocument,
+    removeDocument,
+    isLoading,
+  };
+}

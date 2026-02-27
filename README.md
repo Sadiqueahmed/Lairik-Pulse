@@ -2,128 +2,145 @@
 
 **Offline-Mesh Verification & Recovery for Manipur**
 
-Lairik-Pulse is a privacy-first, offline-capable document verification system designed for crisis recovery scenarios. It combines peer-to-peer mesh networking, zero-knowledge proofs, and decentralized storage to enable secure document verification without relying on centralized infrastructure.
-
-## 🌟 Key Features
-
-- **🔒 Zero-Knowledge Proofs**: Verify documents without revealing their contents using ZK-SNARKs (Groth16 via gnark)
-- **📡 Mesh Networking**: Peer-to-peer communication using libp2p with mDNS/DHT discovery
-- **📦 Decentralized Storage**: IPFS integration for content-addressed document storage
-- **🔐 Local-First Encryption**: AES-256-GCM encryption with Argon2 key derivation
-- **📱 PWA Support**: Works offline as a Progressive Web App
-- **🗣️ Meiteilon Support**: Built for Manipur with local language considerations
-
-## 🏗️ Architecture
-
-```
-lairik-pulse/
-├── apps/
-│   ├── web/          # Next.js 15+ PWA Frontend
-│   └── node/         # Go Backend (libp2p, IPFS, ZKP)
-├── packages/
-│   ├── circuits/     # ZK Circuits (Circom/gnark)
-│   ├── database/     # SQLite schemas
-│   └── shared-types/ # Shared TypeScript/Go types
-└── infrastructure/   # Docker Compose, configs
-```
+A privacy-preserving, offline-first document verification system using Zero-Knowledge Proofs, P2P mesh networking, and IPFS storage. Designed for disaster recovery scenarios where internet connectivity is unreliable or unavailable.
 
 ## 🚀 Quick Start
 
 ### Prerequisites
+- Node.js 18+ and npm
+- Go 1.21+ (for backend)
+- Docker & Docker Compose (optional, for infrastructure)
 
-- Node.js 18+
-- Go 1.21+
-- Docker & Docker Compose (optional)
-
-### Installation
+### Option 1: Full Development Stack (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/lairik-pulse.git
-cd lairik-pulse
-
-# Install dependencies
+# 1. Install dependencies
 npm install
 
-# Start development servers
-npm run dev
+# 2. Start infrastructure (IPFS, PostgreSQL)
+cd infrastructure && docker-compose up -d
+
+# 3. In a new terminal, start the Go backend
+cd apps/node
+./scripts/setup.sh        # First time setup
+go run cmd/main.go        # Start the node
+
+# 4. In another terminal, start the Next.js frontend
+npm run dev               # Starts at http://localhost:3000
 ```
 
-### Running with Docker
+### Option 2: Frontend Only (Mock Mode)
 
 ```bash
-cd infrastructure
-docker-compose up
+# Install and start just the web app
+npm install
+npm run dev
+
+# Frontend will run with mock data (no backend required)
+# Access at http://localhost:3000
 ```
 
-This starts:
-- IPFS node (port 5001)
-- Go backend node (port 8080)
-- PostgreSQL database (port 5432)
+### Option 3: Docker Everything
 
-## 🛠️ Tech Stack
+```bash
+# Build and run all services
+cd infrastructure
+docker-compose up --build
 
-### Frontend
-- **Next.js 15+** (App Router)
-- **Tailwind CSS** for styling
-- **Zustand** for state management
-- **next-pwa** for offline capabilities
-- **WebSockets/gRPC-Web** for real-time communication
+# Access frontend at http://localhost:3000
+# API at http://localhost:8080
+```
 
-### Backend
-- **Go 1.21+**
-- **libp2p** for P2P networking
-- **gnark** for ZK-SNARK circuits
-- **Gin** for REST API
-- **IPFS** for decentralized storage
-- **SQLite** for local database
+## 📁 Project Structure
 
-## 📖 Usage
+```
+lairik-pulse/
+├── apps/
+│   ├── web/              # Next.js 15 PWA (Frontend)
+│   └── node/             # Go backend (P2P, ZKP, IPFS)
+├── packages/
+│   ├── circuits/         # ZK-SNARK circuits (gnark)
+│   ├── database/         # SQLite schemas
+│   └── shared-types/     # TypeScript/Go type definitions
+├── infrastructure/       # Docker Compose, mesh configs
+└── .github/workflows/    # CI/CD
+```
 
-### Document Vault
+## 🔧 Development Commands
 
-Upload documents to your local encrypted vault. Documents are:
-1. Encrypted locally using AES-256-GCM
-2. Optionally pinned to IPFS for redundancy
-3. Indexed with searchable metadata
+```bash
+# Root level (Turborepo)
+npm run dev          # Start all apps in dev mode
+npm run build        # Build all apps
+npm run lint         # Lint all apps
 
-### Mesh Network
+# Frontend only
+cd apps/web
+npm run dev          # Next.js dev server
+npm run build        # Production build
 
-Join the peer-to-peer mesh to:
-- Discover nearby nodes automatically
-- Share documents directly with peers
-- Propagate messages through the network
-- Maintain connectivity without internet
+# Backend only
+cd apps/node
+go run cmd/main.go   # Run Go node
+go test ./...        # Run tests
+```
 
-### ZK Verification
+## 🌐 Architecture
 
-Generate zero-knowledge proofs to:
-- Prove document authenticity without revealing contents
-- Share verification credentials with authorities
-- Maintain privacy while establishing trust
+### Frontend (Next.js 15 PWA)
+- **Offline-first**: Service worker with next-pwa
+- **State**: Zustand for local-first state management
+- **UI**: Tailwind CSS with custom Lairik theme
+- **Tabs**: Vault (documents), Mesh (P2P status), Verify (ZKP)
 
-## 🔐 Security
+### Backend (Go)
+- **P2P**: libp2p with mDNS discovery for local mesh
+- **ZKP**: gnark with Groth16 for privacy-preserving verification
+- **Storage**: IPFS for content-addressed document storage
+- **API**: Gin REST API for frontend communication
+- **NLP**: Meiteilon language support (llama.cpp)
 
-- **Encryption**: All documents are encrypted before storage
-- **ZK Proofs**: Groth16 protocol for efficient verification
-- **P2P Security**: Noise protocol for encrypted peer communication
-- **Local-First**: No data leaves your device unless explicitly shared
+### Infrastructure
+- **IPFS Kubo**: Content-addressed storage
+- **PostgreSQL**: Metadata indexing
+- **Docker**: Containerized deployment
 
-## 🤝 Contributing
+## 🔐 Security Features
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+- **Zero-Knowledge Proofs**: Verify documents without revealing contents
+- **Local Encryption**: Argon2 + AES-GCM for document vault
+- **P2P Mesh**: Direct device-to-device communication (no ISP required)
+- **Private Network**: Swarm key protection for mesh isolation
+
+## 📱 PWA Features
+
+- Works offline after first load
+- Installable on mobile/desktop
+- Background sync when connectivity returns
+- Local document vault with encryption
+
+## 🆘 For Manipur Recovery
+
+This system is specifically designed for:
+- **Offline camps**: No internet required for verification
+- **Privacy**: ZK proofs protect sensitive documents
+- **Resilience**: Distributed mesh survives infrastructure damage
+- **Local language**: Meiteilon (Manipuri) NLP support
 
 ## 📄 License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT License - See LICENSE file for details
 
-## 🙏 Acknowledgments
+## 🤝 Contributing
 
-Built for the people of Manipur during crisis recovery. Special thanks to:
-- The libp2p and IPFS communities
-- ConsenSys for gnark
-- All contributors and testers
+Contributions welcome! Please read CONTRIBUTING.md for guidelines.
+
+## 📞 Support
+
+For issues or questions:
+- Open a GitHub issue
+- Contact: lairik-pulse@example.com
 
 ---
 
-**Made with ❤️ for Manipur**
+**Built with ❤️ for Manipur's recovery**
