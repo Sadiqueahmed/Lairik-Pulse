@@ -14,7 +14,7 @@ export function ZKPVerifier() {
 
   const handleGenerate = async () => {
     if (!selectedDoc) return;
-    await generateProof(documentType);
+    await generateProof(selectedDoc, documentType);
     setVerifiedDocs(prev => new Set([...prev, selectedDoc]));
     setShowResult(true);
   };

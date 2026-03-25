@@ -17,12 +17,12 @@ type EncryptionService struct {
 }
 
 func NewEncryptionService(password string) *EncryptionService {
-	// Derive key using Argon2
-	salt := make([]byte, 16)
-	rand.Read(salt)
-	
+	// Derive a deterministic salt from the password so the key is stable across restarts
+	saltHash := sha256.Sum256([]byte("lairik-pulse-salt-v1:" + password))
+	salt := saltHash[:16]
+
 	key := argon2.IDKey([]byte(password), salt, 3, 64*1024, 4, 32)
-	
+
 	return &EncryptionService{key: key}
 }
 

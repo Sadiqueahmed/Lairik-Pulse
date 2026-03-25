@@ -6,7 +6,7 @@ import { useVault } from '@/hooks/useVault';
 export function VaultUploader() {
   const { documents, addDocument, removeDocument, viewDocument, downloadDocument, isLoading } = useVault();
   const [isDragging, setIsDragging] = useState(false);
-  const [viewingDoc, setViewingDoc] = useState<{ id: string; name: string; content: string; type: string } | null>(null);
+  const [viewingDoc, setViewingDoc] = useState<{ id: string; name: string; url: string; type: string } | null>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -40,9 +40,10 @@ export function VaultUploader() {
   }, [addDocument]);
 
   const handleView = async (doc: { id: string; name: string; type: string }) => {
-    const content = await viewDocument(doc.id);
-    if (content) {
-      setViewingDoc({ ...doc, content });
+    const blob = await viewDocument(doc.id);
+    if (blob) {
+      const url = URL.createObjectURL(blob);
+      setViewingDoc({ ...doc, url });
     }
   };
 
@@ -51,6 +52,7 @@ export function VaultUploader() {
   };
 
   const closeViewer = () => {
+    if (viewingDoc) URL.revokeObjectURL(viewingDoc.url);
     setViewingDoc(null);
   };
 
@@ -234,13 +236,13 @@ export function VaultUploader() {
             <div className="flex-1 overflow-auto p-4 bg-[#0f4c3a]/5">
               {viewingDoc.type.startsWith('image/') ? (
                 <img 
-                  src={viewingDoc.content} 
+                  src={viewingDoc.url} 
                   alt={viewingDoc.name}
                   className="max-w-full h-auto mx-auto rounded-lg shadow-lg"
                 />
               ) : (
                 <iframe
-                  src={viewingDoc.content}
+                  src={viewingDoc.url}
                   className="w-full h-[70vh] rounded-lg"
                   title={viewingDoc.name}
                 />

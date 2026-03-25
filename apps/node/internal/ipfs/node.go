@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ipfs/go-ipfs-api"
+	shell "github.com/ipfs/go-ipfs-api"
 	"github.com/sirupsen/logrus"
 )
 
@@ -16,7 +16,7 @@ type Config struct {
 }
 
 type Node struct {
-	shell  *ipfsapi.Shell
+	sh     *shell.Shell
 	config Config
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -25,11 +25,10 @@ type Node struct {
 func NewNode(ctx context.Context, cfg Config) (*Node, error) {
 	nodeCtx, cancel := context.WithCancel(ctx)
 
-	// Connect to local IPFS daemon (or embedded node)
-	shell := ipfsapi.NewShell("localhost:5001")
+	sh := shell.NewShell("localhost:5001")
 
 	node := &Node{
-		shell:  shell,
+		sh:     sh,
 		config: cfg,
 		ctx:    nodeCtx,
 		cancel: cancel,
@@ -42,7 +41,7 @@ func (n *Node) Start() error {
 	n.config.Logger.Info("IPFS node starting...")
 
 	// Test connection
-	if !n.shell.IsUp() {
+	if !n.sh.IsUp() {
 		n.config.Logger.Warn("IPFS daemon not running, will retry...")
 	}
 
@@ -57,11 +56,11 @@ func (n *Node) Stop() error {
 }
 
 func (n *Node) Add(data []byte) (string, error) {
-	if !n.shell.IsUp() {
+	if !n.sh.IsUp() {
 		return "", fmt.Errorf("IPFS daemon not available")
 	}
 
-	cid, err := n.shell.Add(bytes.NewReader(data))
+	cid, err := n.sh.Add(bytes.NewReader(data))
 	if err != nil {
 		return "", fmt.Errorf("failed to add to IPFS: %w", err)
 	}
@@ -70,11 +69,11 @@ func (n *Node) Add(data []byte) (string, error) {
 }
 
 func (n *Node) Get(cid string) ([]byte, error) {
-	if !n.shell.IsUp() {
+	if !n.sh.IsUp() {
 		return nil, fmt.Errorf("IPFS daemon not available")
 	}
 
-	reader, err := n.shell.Cat(cid)
+	reader, err := n.sh.Cat(cid)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get from IPFS: %w", err)
 	}
@@ -83,9 +82,9 @@ func (n *Node) Get(cid string) ([]byte, error) {
 }
 
 func (n *Node) Pin(cid string) error {
-	if !n.shell.IsUp() {
+	if !n.sh.IsUp() {
 		return fmt.Errorf("IPFS daemon not available")
 	}
 
-	return n.shell.Pin(cid)
+	return n.sh.Pin(cid)
 }
