@@ -16,15 +16,14 @@
 
 ---
 
-<div align="center">
-
 ### 🖥️ Live Application Preview
 
-[![Lairik-Pulse Screenshot](https://v1.screenshot.11ty.dev/https%3A%2F%2Flairik-pulse.vercel.app%2F/opengraph/_2024_01_01)](https://lairik-pulse.vercel.app)
+<a href="https://lairik-pulse.vercel.app/">
+  <img src="https://api.microlink.io?url=https%3A%2F%2Flairik-pulse.vercel.app&screenshot=true&meta=false&embed=screenshot.url" alt="Lairik Pulse Live Preview" width="100%" />
+</a>
 
-*☝️ Click the image to visit the live site. Screenshot auto-updates with every deployment.*
-
-</div>
+> [!IMPORTANT]
+> **[Click here to open the Interactive Live Demo](https://lairik-pulse.vercel.app/)**
 
 ---
 
