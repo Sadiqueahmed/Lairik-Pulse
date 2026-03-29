@@ -28,7 +28,7 @@ export function useZKP(): UseZKPReturn {
 
   /**
    * Generate a Groth16 ZK proof for a document via the Go backend.
-   * Falls back to a mock if the backend is unreachable (dev mode).
+   * Returns null if the backend is unreachable — NO mock proofs.
    */
   const generateProof = useCallback(
     async (documentId: string, type: 'degree' | 'identity'): Promise<ZKProof | null> => {
@@ -61,20 +61,10 @@ export function useZKP(): UseZKPReturn {
         return proof;
       } catch (err) {
         console.error('ZKP generate error:', err);
-        // Fallback mock for dev when backend unavailable
-        const mockProof: ZKProof = {
-          proofHash:
-            '0x' +
-            Array.from({ length: 64 }, () => Math.floor(Math.random() * 16).toString(16)).join(''),
-          circuitType: type === 'degree' ? 'DegreeVerification' : 'IdentityProof',
-          verificationTimeMs: 2100,
-          sizeBytes: 192,
-          timestamp: Date.now(),
-          verified: true,
-        };
-        setLastProof(mockProof);
-        setError('Backend unavailable — showing demo proof');
-        return mockProof;
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        setError(`Proof generation failed: ${message}. Ensure the Go backend is running on port 8080.`);
+        // NO mock proof — return null so UI can show proper state
+        return null;
       } finally {
         setIsGenerating(false);
       }
@@ -105,7 +95,7 @@ export function useZKP(): UseZKPReturn {
       return data.valid === true;
     } catch (err) {
       console.error('ZKP verify error:', err);
-      setError('Verification request failed');
+      setError('Verification failed — backend unreachable');
       return false;
     } finally {
       setIsVerifying(false);

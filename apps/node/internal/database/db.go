@@ -23,7 +23,7 @@ func Open(dataDir string, logger *logrus.Logger) (*DB, error) {
 		return nil, fmt.Errorf("failed to create data dir: %w", err)
 	}
 
-	dbPath := filepath.Join(dataDir, "lairik.db")
+	dbPath := filepath.Join(dataDir, "pulse.db")
 	conn, err := sql.Open("sqlite3", dbPath+"?_journal_mode=WAL&_foreign_keys=on")
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite: %w", err)
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS proofs (
 	proof_hash TEXT NOT NULL,
 	proof_type TEXT NOT NULL,
 	proof_data BLOB,
-	verifying_key BLOB,
+	public_witness BLOB,
 	verification_time_ms INTEGER,
 	size_bytes INTEGER,
 	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -196,7 +196,7 @@ type ProofRecord struct {
 	ProofHash        string
 	ProofType        string
 	ProofData        []byte
-	VerifyingKey     []byte
+	PublicWitness    []byte
 	VerificationTime int64
 	SizeBytes        int
 	CreatedAt        time.Time
@@ -205,10 +205,10 @@ type ProofRecord struct {
 // SaveProof inserts a generated proof.
 func (db *DB) SaveProof(p ProofRecord) error {
 	_, err := db.conn.Exec(`
-		INSERT INTO proofs (id, document_id, proof_hash, proof_type, proof_data, verifying_key, verification_time_ms, size_bytes, created_at)
+		INSERT INTO proofs (id, document_id, proof_hash, proof_type, proof_data, public_witness, verification_time_ms, size_bytes, created_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		p.ID, p.DocumentID, p.ProofHash, p.ProofType,
-		p.ProofData, p.VerifyingKey, p.VerificationTime, p.SizeBytes, p.CreatedAt,
+		p.ProofData, p.PublicWitness, p.VerificationTime, p.SizeBytes, p.CreatedAt,
 	)
 	return err
 }
@@ -216,12 +216,12 @@ func (db *DB) SaveProof(p ProofRecord) error {
 // GetProofByHash retrieves a proof record by its hash.
 func (db *DB) GetProofByHash(hash string) (*ProofRecord, error) {
 	row := db.conn.QueryRow(`
-		SELECT id, document_id, proof_hash, proof_type, proof_data, verifying_key, verification_time_ms, size_bytes, created_at
+		SELECT id, document_id, proof_hash, proof_type, proof_data, public_witness, verification_time_ms, size_bytes, created_at
 		FROM proofs WHERE proof_hash = ?`, hash)
 
 	p := &ProofRecord{}
 	err := row.Scan(&p.ID, &p.DocumentID, &p.ProofHash, &p.ProofType,
-		&p.ProofData, &p.VerifyingKey, &p.VerificationTime, &p.SizeBytes, &p.CreatedAt)
+		&p.ProofData, &p.PublicWitness, &p.VerificationTime, &p.SizeBytes, &p.CreatedAt)
 	if err != nil {
 		return nil, fmt.Errorf("GetProofByHash: %w", err)
 	}
@@ -231,7 +231,7 @@ func (db *DB) GetProofByHash(hash string) (*ProofRecord, error) {
 // ListProofsByDocument returns all proofs for a given document.
 func (db *DB) ListProofsByDocument(docID string) ([]ProofRecord, error) {
 	rows, err := db.conn.Query(`
-		SELECT id, document_id, proof_hash, proof_type, proof_data, verifying_key, verification_time_ms, size_bytes, created_at
+		SELECT id, document_id, proof_hash, proof_type, proof_data, public_witness, verification_time_ms, size_bytes, created_at
 		FROM proofs WHERE document_id = ? ORDER BY created_at DESC`, docID)
 	if err != nil {
 		return nil, err
@@ -242,7 +242,7 @@ func (db *DB) ListProofsByDocument(docID string) ([]ProofRecord, error) {
 	for rows.Next() {
 		var p ProofRecord
 		if err := rows.Scan(&p.ID, &p.DocumentID, &p.ProofHash, &p.ProofType,
-			&p.ProofData, &p.VerifyingKey, &p.VerificationTime, &p.SizeBytes, &p.CreatedAt); err != nil {
+			&p.ProofData, &p.PublicWitness, &p.VerificationTime, &p.SizeBytes, &p.CreatedAt); err != nil {
 			return nil, err
 		}
 		proofs = append(proofs, p)

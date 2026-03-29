@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
+	"github.com/joho/godotenv"
 	"github.com/lairik-pulse/node/internal/api"
 	"github.com/lairik-pulse/node/internal/database"
 	"github.com/lairik-pulse/node/internal/ipfs"
@@ -31,6 +33,26 @@ func main() {
 	log.SetLevel(logrus.InfoLevel)
 	log.SetFormatter(&logrus.TextFormatter{FullTimestamp: true})
 	log.Info("Starting Lairik-Pulse Node...")
+
+	// Load .env file
+	if err := godotenv.Load(); err != nil {
+		log.Warn("No .env file found or unable to load it. Ignoring...")
+	}
+
+	// Override flags with env vars if present
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		if p, err := strconv.Atoi(envPort); err == nil {
+			*port = p
+		}
+	}
+	if envP2PPort := os.Getenv("P2P_PORT"); envP2PPort != "" {
+		if p, err := strconv.Atoi(envP2PPort); err == nil {
+			*p2pPort = p
+		}
+	}
+	if envDataDir := os.Getenv("DATA_DIR"); envDataDir != "" {
+		*dataDir = envDataDir
+	}
 
 	// Create data directory
 	if err := os.MkdirAll(*dataDir, 0755); err != nil {
@@ -108,8 +130,14 @@ func main() {
 		}
 	}()
 
-	log.Infof("Lairik-Pulse Node running on port %d", *port)
-	log.Infof("P2P Node ID: %s", p2pNode.ID())
+	log.Info("═══════════════════════════════════════════════════")
+	log.Info("  Lairik-Pulse Node Ready")
+	log.Info("═══════════════════════════════════════════════════")
+	log.Infof("  API Server : http://localhost:%d", *port)
+	log.Infof("  P2P Node   : %s", p2pNode.ID())
+	log.Infof("  Database   : %s/pulse.db", *dataDir)
+	log.Infof("  WebSocket  : ws://localhost:%d/p2p/ws", *port)
+	log.Info("═══════════════════════════════════════════════════")
 	log.Info("Press Ctrl+C to stop")
 
 	// Wait for shutdown signal

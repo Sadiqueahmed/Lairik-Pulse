@@ -1,9 +1,11 @@
 'use client';
 
 import { useP2P } from '@/hooks/useP2P';
+import { usePulseStore } from '@/store/pulseStore';
 
 export function MeshStatus() {
-  const { isConnected, peers, nodeId, isLoading, error, refreshPeers } = useP2P();
+  const { isConnected, peers, nodeId, isLoading, error, refreshPeers, verifications } = useP2P();
+  const { backendOnline } = usePulseStore();
 
   return (
     <div className="space-y-6">
@@ -44,7 +46,9 @@ export function MeshStatus() {
             <div className="text-xs text-[#0f4c3a]/60">Discovery</div>
           </div>
           <div className="bg-[#0f4c3a]/5 rounded-lg p-4 text-center">
-            <div className="text-2xl font-bold text-[#4682b4]">Offline</div>
+            <div className={`text-2xl font-bold ${backendOnline ? 'text-green-600' : 'text-amber-600'}`}>
+              {backendOnline ? 'Live' : 'Offline'}
+            </div>
             <div className="text-xs text-[#0f4c3a]/60">Mode</div>
           </div>
         </div>
@@ -58,7 +62,7 @@ export function MeshStatus() {
             <span className="text-sm font-medium text-[#0f4c3a]">Your Node ID</span>
           </div>
           <code className="text-xs text-[#0f4c3a]/70 bg-white/50 px-2 py-1 rounded block break-all">
-            {nodeId || 'Connecting...'}
+            {nodeId || (isLoading ? 'Connecting...' : 'Not connected')}
           </code>
         </div>
 
@@ -74,17 +78,23 @@ export function MeshStatus() {
           {isLoading ? 'Refreshing...' : 'Refresh Peers'}
         </button>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-sm text-red-600 flex items-center gap-2">
+        {/* Backend Not Running Notice */}
+        {error && !backendOnline && (
+          <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <p className="text-sm font-semibold text-amber-800 flex items-center gap-2 mb-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {error.message}
+              Go Backend Not Running
             </p>
-            <p className="text-xs text-red-500 mt-1">
-              Using demo mode - Go backend not running
+            <p className="text-xs text-amber-700 mb-2">
+              Start the backend to enable real-time P2P mesh networking:
+            </p>
+            <code className="text-xs bg-amber-100 text-amber-900 px-3 py-2 rounded block font-mono">
+              cd apps/node && go run cmd/main.go
+            </code>
+            <p className="text-xs text-amber-600 mt-2">
+              The mesh will auto-connect once the backend is available.
             </p>
           </div>
         )}
@@ -118,7 +128,7 @@ export function MeshStatus() {
                       {peer.id.slice(0, 12)}...
                     </p>
                     <p className="text-xs text-[#0f4c3a]/50">
-                      {peer.address}
+                      {peer.address || 'via mDNS'}
                     </p>
                   </div>
                 </div>
@@ -132,17 +142,17 @@ export function MeshStatus() {
         </div>
       )}
 
-      {peers.length === 0 && !isLoading && (
+      {peers.length === 0 && !isLoading && backendOnline && (
         <div className="manipur-card p-8 text-center">
           <div className="manipur-icon-circle mx-auto mb-4">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
             </svg>
           </div>
-          <h4 className="text-lg font-medium text-[#0f4c3a] mb-2">No Peers Connected</h4>
+          <h4 className="text-lg font-medium text-[#0f4c3a] mb-2">Scanning for Peers</h4>
           <p className="text-sm text-[#0f4c3a]/60 max-w-md mx-auto">
-            Your device will automatically discover other Lairik-Pulse nodes on the local network using mDNS. 
-            Make sure other devices are on the same Wi-Fi network.
+            Your node is running and broadcasting via mDNS. Other Lairik-Pulse nodes on this 
+            local network will be discovered automatically.
           </p>
         </div>
       )}
@@ -161,6 +171,48 @@ export function MeshStatus() {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Recent Verifications */}
+      <div className="manipur-card p-6 border-[#d4af37]/30">
+        <h3 className="text-lg font-semibold text-[#0f4c3a] mb-4 flex items-center gap-2">
+          <svg className="w-5 h-5 text-[#d4af37]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          Recent Network Proofs
+          <span className="manipur-badge">{verifications?.length || 0}</span>
+        </h3>
+        
+        {verifications && verifications.length > 0 ? (
+          <div className="space-y-3">
+            {verifications.map((v, i) => (
+              <div key={i} className="flex flex-col p-3 bg-gradient-to-r from-green-50 to-white rounded-lg border border-green-100">
+                <div className="flex justify-between items-start mb-1">
+                  <span className="text-xs font-semibold text-green-700 bg-green-100 px-2 py-0.5 rounded uppercase">
+                    {v.type} PROOF
+                  </span>
+                  <span className="text-[10px] text-gray-500">
+                    {new Date(v.timestamp).toLocaleTimeString()}
+                  </span>
+                </div>
+                <div className="text-xs text-[#0f4c3a] mb-1 font-mono break-all line-clamp-1">
+                  Doc: {v.document_id}
+                </div>
+                <div className="text-[10px] text-gray-500 font-mono break-all line-clamp-1">
+                  Hash: {v.proof_hash}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-6">
+            <p className="text-sm text-[#0f4c3a]/60">
+              {backendOnline 
+                ? 'Listening for GossipSub broadcasts...' 
+                : 'Start the Go backend to receive live proof broadcasts'}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

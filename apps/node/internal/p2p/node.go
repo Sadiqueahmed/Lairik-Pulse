@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/libp2p/go-libp2p"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"github.com/libp2p/go-libp2p/core/host"
 	"github.com/libp2p/go-libp2p/core/peer"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -20,10 +21,14 @@ type Config struct {
 }
 
 type Node struct {
-	host   host.Host
-	config Config
-	ctx    context.Context
-	cancel context.CancelFunc
+	host             host.Host
+	pubsub           *pubsub.PubSub
+	topic            *pubsub.Topic
+	config           Config
+	ctx              context.Context
+	cancel           context.CancelFunc
+	VerificationMsgs chan []byte
+	PeerJoined       chan string
 }
 
 func NewNode(ctx context.Context, cfg Config) (*Node, error) {
@@ -42,11 +47,20 @@ func NewNode(ctx context.Context, cfg Config) (*Node, error) {
 		return nil, fmt.Errorf("failed to create host: %w", err)
 	}
 
+	ps, err := pubsub.NewGossipSub(nodeCtx, h)
+	if err != nil {
+		cancel()
+		return nil, fmt.Errorf("failed to create gossipsub: %w", err)
+	}
+
 	node := &Node{
-		host:   h,
-		config: cfg,
-		ctx:    nodeCtx,
-		cancel: cancel,
+		host:             h,
+		pubsub:           ps,
+		config:           cfg,
+		ctx:              nodeCtx,
+		cancel:           cancel,
+		VerificationMsgs: make(chan []byte, 100),
+		PeerJoined:       make(chan string, 100),
 	}
 
 	return node, nil
@@ -55,6 +69,36 @@ func NewNode(ctx context.Context, cfg Config) (*Node, error) {
 func (n *Node) Start() error {
 	n.config.Logger.Infof("P2P node starting with ID: %s", n.host.ID().String())
 	n.config.Logger.Infof("Listening on: %v", n.host.Addrs())
+
+	// Setup GossipSub topic
+	topic, err := n.pubsub.Join("verification-pulse")
+	if err != nil {
+		return fmt.Errorf("failed to join topic: %w", err)
+	}
+	n.topic = topic
+
+	sub, err := topic.Subscribe()
+	if err != nil {
+		return fmt.Errorf("failed to subscribe: %w", err)
+	}
+
+	go func() {
+		for {
+			msg, err := sub.Next(n.ctx)
+			if err != nil {
+				return
+			}
+			// Skip our own messages
+			if msg.ReceivedFrom == n.host.ID() {
+				continue
+			}
+			select {
+			case n.VerificationMsgs <- msg.Data:
+			case <-n.ctx.Done():
+				return
+			}
+		}
+	}()
 
 	// Setup mDNS discovery
 	mdnsService := mdns.NewMdnsService(n.host, "lairik-pulse", &discoveryNotifee{n: n})
@@ -80,6 +124,13 @@ func (n *Node) Peers() []peer.ID {
 	return n.host.Network().Peers()
 }
 
+func (n *Node) BroadcastVerification(payload []byte) error {
+	if n.topic == nil {
+		return fmt.Errorf("not joined topic yet")
+	}
+	return n.topic.Publish(n.ctx, payload)
+}
+
 type discoveryNotifee struct {
 	n *Node
 }
@@ -92,5 +143,10 @@ func (d *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 		d.n.config.Logger.Warnf("Failed to connect to peer %s: %v", pi.ID.String(), err)
 	} else {
 		d.n.config.Logger.Infof("Connected to peer: %s", pi.ID.String())
+		// Notify WS via channel non-blocking
+		select {
+		case d.n.PeerJoined <- pi.ID.String():
+		default:
+		}
 	}
 }

@@ -11,6 +11,7 @@ import { ProfileEditor } from '../../components/profile/ProfileEditor';
 import { useProfile } from '../../hooks/useProfile';
 import { useMeshService } from '../../services/meshService';
 import { useWebSocket } from '../../hooks/useWebSocket';
+import { usePulseStore } from '../../store/pulseStore';
 import { Logo } from '../../components/ui/Logo';
 
 export default function Dashboard() {
@@ -37,6 +38,8 @@ export default function Dashboard() {
     discoverPeers: discoverMeshPeers 
   } = useMeshService();
 
+  const { backendOnline, syncPending } = usePulseStore();
+
   // Redirect if not authenticated
   useEffect(() => {
     if (isLoaded && !user) {
@@ -44,9 +47,9 @@ export default function Dashboard() {
     }
   }, [isLoaded, user, router]);
 
-  // WebSocket for real-time communication
+  // WebSocket for real-time communication — route must match Go backend /p2p/ws
   const { isConnected, isConnecting } = useWebSocket({
-    url: process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080/ws',
+    url: (process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8080') + '/p2p/ws',
     onConnect: () => {
       setRealtimeStatus('connected');
     },
@@ -228,6 +231,30 @@ export default function Dashboard() {
           </div>
         </div>
       </nav>
+
+      {/* Backend Connectivity Banner */}
+      {!backendOnline && (
+        <div className="relative bg-gradient-to-r from-amber-50 to-amber-100 border-b border-amber-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-3 h-3 bg-amber-400 rounded-full animate-pulse"></div>
+                <p className="text-sm text-amber-800 font-medium">
+                  Offline Mode — Data is cached locally.
+                  {syncPending > 0 && (
+                    <span className="ml-2 bg-amber-200 text-amber-900 px-2 py-0.5 rounded-full text-xs font-semibold">
+                      {syncPending} pending sync{syncPending !== 1 ? 's' : ''}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <code className="hidden md:block text-xs bg-amber-200/70 text-amber-900 px-3 py-1.5 rounded-lg font-mono">
+                cd apps/node && go run cmd/main.go
+              </code>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">

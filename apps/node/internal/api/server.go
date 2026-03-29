@@ -5,8 +5,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
@@ -33,11 +36,13 @@ type Config struct {
 
 // Server is the HTTP/WebSocket server.
 type Server struct {
-	config   Config
-	router   *gin.Engine
-	server   *http.Server
-	upgrader websocket.Upgrader
-	enc      *cryptopkg.EncryptionService
+	config    Config
+	router    *gin.Engine
+	server    *http.Server
+	upgrader  websocket.Upgrader
+	enc       *cryptopkg.EncryptionService
+	wsClients map[string]chan interface{}
+	wsMu      sync.RWMutex
 }
 
 // NewServer creates and configures the server.
@@ -53,7 +58,8 @@ func NewServer(cfg Config) *Server {
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
-		enc: cryptopkg.NewEncryptionService("lairik-pulse-vault-key"),
+		enc:       cryptopkg.NewEncryptionService("lairik-pulse-vault-key"),
+		wsClients: make(map[string]chan interface{}),
 	}
 
 	s.setupRoutes()
@@ -68,6 +74,7 @@ func (s *Server) setupRoutes() {
 	s.router.GET("/p2p/status", s.handleP2PStatus)
 	s.router.GET("/p2p/peers", s.handleP2PPeers)
 	s.router.GET("/p2p/ws", s.handleP2PWebSocket)
+	s.router.GET("/ws", s.handleP2PWebSocket) // Alias for convenience
 
 	// IPFS
 	s.router.POST("/ipfs/add", s.handleIPFSAdd)
@@ -95,14 +102,60 @@ func (s *Server) Start() error {
 		Addr:    fmt.Sprintf(":%d", s.config.Port),
 		Handler: s.router,
 	}
+
+	// Start P2P event broadcaster
+	go s.runP2PBroadcaster()
+
 	return s.server.ListenAndServe()
 }
 
+func (s *Server) broadcastWS(msg interface{}) {
+	s.wsMu.RLock()
+	defer s.wsMu.RUnlock()
+	for _, ch := range s.wsClients {
+		select {
+		case ch <- msg:
+		default:
+			// Drop message if client channel is full
+		}
+	}
+}
+
+func (s *Server) runP2PBroadcaster() {
+	for {
+		select {
+		case peerID := <-s.config.P2PNode.PeerJoined:
+			s.broadcastWS(gin.H{
+				"type":      "peer_joined",
+				"payload":   gin.H{"peer_id": peerID},
+				"timestamp": time.Now().Unix(),
+			})
+			peers := s.config.P2PNode.Peers()
+			s.broadcastWS(gin.H{
+				"type":      "peers",
+				"payload":   gin.H{"peers": s.buildPeerList(peers), "count": len(peers)},
+				"timestamp": time.Now().Unix(),
+			})
+		case msg := <-s.config.P2PNode.VerificationMsgs:
+			s.broadcastWS(gin.H{
+				"type":      "verification_received",
+				"payload":   string(msg),
+				"timestamp": time.Now().Unix(),
+			})
+		}
+	}
+}
+
 // Stop gracefully shuts down the server.
-func (s *Server) Stop() error {
+func (s *Server) Stop() {
+	if s.server == nil {
+		return
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	return s.server.Shutdown(ctx)
+	if err := s.server.Shutdown(ctx); err != nil {
+		s.config.Logger.Errorf("Server shutdown error: %v", err)
+	}
 }
 
 // ──────────────────────────────────────────────
@@ -163,17 +216,29 @@ func (s *Server) handleP2PWebSocket(c *gin.Context) {
 		"timestamp": time.Now().Unix(),
 	})
 
+	// Register client
+	clientID := uuid.New().String()
+	clientCh := make(chan interface{}, 20)
+	s.wsMu.Lock()
+	s.wsClients[clientID] = clientCh
+	s.wsMu.Unlock()
+
+	defer func() {
+		s.wsMu.Lock()
+		delete(s.wsClients, clientID)
+		s.wsMu.Unlock()
+		close(clientCh)
+	}()
+
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 
-	quit := make(chan struct{})
-
 	// Read goroutine — avoids spin-loop
 	go func() {
-		defer close(quit)
 		for {
 			if _, _, err := conn.ReadMessage(); err != nil {
 				s.config.Logger.Info("WebSocket client disconnected")
+				conn.Close()
 				return
 			}
 		}
@@ -181,8 +246,6 @@ func (s *Server) handleP2PWebSocket(c *gin.Context) {
 
 	for {
 		select {
-		case <-quit:
-			return
 		case <-ticker.C:
 			peers := s.config.P2PNode.Peers()
 			if err := conn.WriteJSON(gin.H{
@@ -190,6 +253,13 @@ func (s *Server) handleP2PWebSocket(c *gin.Context) {
 				"payload":   gin.H{"peers": s.buildPeerList(peers), "count": len(peers)},
 				"timestamp": time.Now().Unix(),
 			}); err != nil {
+				return
+			}
+		case msg, ok := <-clientCh:
+			if !ok {
+				return
+			}
+			if err := conn.WriteJSON(msg); err != nil {
 				return
 			}
 		}
@@ -270,10 +340,34 @@ func (s *Server) handleZKPGenerate(c *gin.Context) {
 		return
 	}
 
-	// Use content as witness data; fall back to hash bytes if content not stored
-	witnessData := doc.Content
+	// Use content from database if available
+	var witnessData []byte
+	
+	if len(doc.Content) > 0 {
+		witnessData, err = s.enc.Decrypt(doc.Content)
+		if err != nil {
+			s.config.Logger.Warnf("failed to decrypt cached DB document: %v", err)
+		}
+	}
+	
+	// Fallback to fetching encrypted content from IPFS mesh
+	if len(witnessData) == 0 && doc.CID != "" && s.config.IPFSNode != nil {
+		s.config.Logger.Infof("fetching document %s from local IPFS mesh %s", doc.ID, doc.CID)
+		ipfsData, ipfsErr := s.config.IPFSNode.Get(doc.CID)
+		if ipfsErr == nil {
+			witnessData, err = s.enc.Decrypt(ipfsData)
+			if err != nil {
+				s.config.Logger.Warnf("failed to decrypt IPFS document: %v", err)
+			} else {
+				// Cache back into SQLite
+				doc.Content = ipfsData
+				s.config.DB.AddDocument(*doc) // Acts as upsert depending on schema
+			}
+		}
+	}
+
 	if len(witnessData) == 0 {
-		witnessData = []byte(doc.Hash)
+		return
 	}
 
 	result, err := s.config.ZKP.GenerateProof(witnessData, req.ProofType)
@@ -289,13 +383,21 @@ func (s *Server) handleZKPGenerate(c *gin.Context) {
 		ProofHash:        result.Hash,
 		ProofType:        req.ProofType,
 		ProofData:        result.ProofBytes,
-		VerifyingKey:     result.VerifyingKeyBytes,
+		PublicWitness:    result.PublicWitnessBytes,
 		VerificationTime: result.VerificationTime,
 		SizeBytes:        result.SizeBytes,
 		CreatedAt:        time.Now(),
 	}
 	if err := s.config.DB.SaveProof(proofRecord); err != nil {
 		s.config.Logger.Warnf("failed to save proof: %v", err)
+	}
+
+	// Broadcast proof to P2P mesh
+	// Since we send a structured JSON to the peers
+	broadcastPayload := []byte(fmt.Sprintf(`{"document_id":"%s","proof_hash":"%s","type":"%s"}`,
+		req.DocumentID, result.Hash, req.ProofType))
+	if err := s.config.P2PNode.BroadcastVerification(broadcastPayload); err != nil {
+		s.config.Logger.Warnf("Failed to broadcast verification: %v", err)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -322,7 +424,7 @@ func (s *Server) handleZKPVerify(c *gin.Context) {
 		return
 	}
 
-	valid, err := s.config.ZKP.VerifyProofFromBytes(proof.ProofData, proof.VerifyingKey)
+	valid, err := s.config.ZKP.VerifyProofFromBytes(proof.ProofData, proof.PublicWitness)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "verification error: " + err.Error()})
 		return
@@ -363,10 +465,10 @@ func (s *Server) handleAddDocument(c *gin.Context) {
 		return
 	}
 
-	// Optional: pin to IPFS
+	// Store encrypted payload on IPFS mesh
 	cid := ""
 	if s.config.IPFSNode != nil {
-		if c, ipfsErr := s.config.IPFSNode.Add(data); ipfsErr == nil {
+		if c, ipfsErr := s.config.IPFSNode.Add(encrypted); ipfsErr == nil {
 			cid = c
 		}
 	}
@@ -388,6 +490,13 @@ func (s *Server) handleAddDocument(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "db error: " + err.Error()})
 		return
 	}
+
+	// Broadcast upload finalized
+	s.broadcastWS(gin.H{
+		"type":      "document_uploaded",
+		"payload":   gin.H{"document_id": doc.ID, "hash": doc.Hash},
+		"timestamp": time.Now().Unix(),
+	})
 
 	c.JSON(http.StatusCreated, gin.H{
 		"id":         doc.ID,
@@ -488,14 +597,19 @@ func (s *Server) handleNLPSummarize(c *gin.Context) {
 // ──────────────────────────────────────────────
 
 func corsMiddleware() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
-		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-		c.Next()
-	}
+	return cors.New(cors.Config{
+		AllowOrigins: []string{
+			"http://localhost:3000",
+			"http://localhost:3001",
+		},
+		AllowOriginFunc: func(origin string) bool {
+			// Allow all Vercel preview/production deployments
+			return strings.HasSuffix(origin, ".vercel.app")
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Length", "Content-Type", "Authorization", "Accept", "X-Requested-With", "Cache-Control"},
+		ExposeHeaders:    []string{"Content-Length", "Content-Disposition"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	})
 }

@@ -30,25 +30,15 @@ type Service struct {
 	vk     groth16.VerifyingKey
 }
 
-// DocumentCircuit is the gnark circuit for document hash verification.
-type DocumentCircuit struct {
-	DocumentHash frontend.Variable
-	ProofType    frontend.Variable `gnark:",public"`
-}
-
-// Define implements the gnark circuit.
-func (c *DocumentCircuit) Define(api frontend.API) error {
-	api.AssertIsDifferent(c.DocumentHash, 0)
-	return nil
-}
+// DegreeCircuit is now defined in degree_circuit.go
 
 // ProofResult holds the output of a successful proof generation.
 type ProofResult struct {
-	Hash             string
-	ProofBytes       []byte
-	VerifyingKeyBytes []byte
-	VerificationTime int64
-	SizeBytes        int
+	Hash               string
+	ProofBytes         []byte
+	PublicWitnessBytes []byte
+	VerificationTime   int64
+	SizeBytes          int
 }
 
 // NewService compiles the circuit and runs the trusted setup once at startup.
@@ -56,7 +46,7 @@ func NewService(cfg Config) (*Service, error) {
 	cfg.Logger.Info("ZKP: compiling circuit (one-time setup)...")
 	start := time.Now()
 
-	var circuit DocumentCircuit
+	var circuit DegreeCircuit
 	ccs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		return nil, fmt.Errorf("zkp: failed to compile circuit: %w", err)
@@ -84,19 +74,29 @@ func (s *Service) GenerateProof(documentData []byte, proofType string) (*ProofRe
 	hash := sha256.Sum256(documentData)
 	hashInt := new(big.Int).SetBytes(hash[:])
 
-	proofTypeInt := 1
-	if proofType == "identity" {
-		proofTypeInt = 2
-	}
+	// For MVP, we use deterministic/mock variables for degree details
+	// taking studentID, issueDate, etc as constants
+	studentIDInt := big.NewInt(123456)
+	issueDateInt := big.NewInt(1600000000)
+	validUntilInt := big.NewInt(1800000000)
+	institutionHashInt := big.NewInt(987654)
 
-	assignment := &DocumentCircuit{
-		DocumentHash: hashInt,
-		ProofType:    proofTypeInt,
+	assignment := &DegreeCircuit{
+		DegreeHash:      hashInt,
+		StudentID:       studentIDInt,
+		IssueDate:       issueDateInt,
+		InstitutionHash: institutionHashInt,
+		ValidUntil:      validUntilInt,
 	}
 
 	witness, err := frontend.NewWitness(assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		return nil, fmt.Errorf("zkp: failed to create witness: %w", err)
+	}
+
+	pubWitness, err := witness.Public()
+	if err != nil {
+		return nil, fmt.Errorf("zkp: failed to create public witness: %w", err)
 	}
 
 	proof, err := groth16.Prove(s.ccs, s.pk, witness)
@@ -110,43 +110,40 @@ func (s *Service) GenerateProof(documentData []byte, proofType string) (*ProofRe
 		return nil, fmt.Errorf("zkp: failed to serialize proof: %w", err)
 	}
 
-	// Serialize verifying key to bytes for storage
-	var vkBuf bytes.Buffer
-	if _, err := s.vk.WriteTo(&vkBuf); err != nil {
-		return nil, fmt.Errorf("zkp: failed to serialize verifying key: %w", err)
+	// Serialize public witness instead of verifying key
+	pubWitnessBytes, err := pubWitness.MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("zkp: failed to serialize public witness: %w", err)
 	}
 
 	proofBytes := proofBuf.Bytes()
 
 	return &ProofResult{
-		Hash:              hex.EncodeToString(hash[:]),
-		ProofBytes:        proofBytes,
-		VerifyingKeyBytes: vkBuf.Bytes(),
-		VerificationTime:  time.Since(start).Milliseconds(),
-		SizeBytes:         len(proofBytes),
+		Hash:               hex.EncodeToString(hash[:]),
+		ProofBytes:         proofBytes,
+		PublicWitnessBytes: pubWitnessBytes,
+		VerificationTime:   time.Since(start).Milliseconds(),
+		SizeBytes:          len(proofBytes),
 	}, nil
 }
 
 // VerifyProofFromBytes deserializes and verifies a stored proof.
-func (s *Service) VerifyProofFromBytes(proofData []byte, vkData []byte) (bool, error) {
+func (s *Service) VerifyProofFromBytes(proofData []byte, pubWitnessData []byte) (bool, error) {
 	proof := groth16.NewProof(ecc.BN254)
 	if _, err := proof.ReadFrom(bytes.NewReader(proofData)); err != nil {
 		return false, fmt.Errorf("zkp: failed to deserialize proof: %w", err)
 	}
 
-	vk := groth16.NewVerifyingKey(ecc.BN254)
-	if _, err := vk.ReadFrom(bytes.NewReader(vkData)); err != nil {
-		return false, fmt.Errorf("zkp: failed to deserialize verifying key: %w", err)
-	}
+	// Use the static loaded VK from service startup
+	vk := s.vk
 
-	// Build public witness (ProofType = 1 as public input)
-	pubAssignment := &DocumentCircuit{
-		DocumentHash: 0, // private — not needed for verification
-		ProofType:    1,
-	}
-	pubWitness, err := frontend.NewWitness(pubAssignment, ecc.BN254.ScalarField(), frontend.PublicOnly())
+	// Build public witness from data
+	pubWitness, err := frontend.NewWitness(&DegreeCircuit{}, ecc.BN254.ScalarField(), frontend.PublicOnly())
 	if err != nil {
-		return false, fmt.Errorf("zkp: failed to create public witness: %w", err)
+		return false, fmt.Errorf("zkp: failed to create public witness target: %w", err)
+	}
+	if err := pubWitness.UnmarshalBinary(pubWitnessData); err != nil {
+		return false, fmt.Errorf("zkp: failed to unmarshal public witness: %w", err)
 	}
 
 	if err := groth16.Verify(proof, vk, pubWitness); err != nil {
