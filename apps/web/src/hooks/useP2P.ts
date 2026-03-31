@@ -83,8 +83,12 @@ export function useP2P(): UseP2PReturn {
       console.log('P2P WebSocket connected');
       setBackendOnline(true);
     },
-    onDisconnect: () => {
-      console.log('P2P WebSocket disconnected');
+    onDisconnect: (wasClean, attempts) => {
+      console.log(`P2P WebSocket disconnected (clean: ${wasClean}, attempts: ${attempts})`);
+      // Only show 'Backend Not Running' to users after 3 consecutive ping/heartbeat failures
+      if (attempts >= 3 || wasClean) {
+        setBackendOnline(false);
+      }
     },
   });
 

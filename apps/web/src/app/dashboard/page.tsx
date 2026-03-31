@@ -12,6 +12,7 @@ import { useProfile } from '../../hooks/useProfile';
 import { useMeshService } from '../../services/meshService';
 import { useWebSocket } from '../../hooks/useWebSocket';
 import { usePulseStore } from '../../store/pulseStore';
+import { useVault } from '../../hooks/useVault';
 import { Logo } from '../../components/ui/Logo';
 
 export default function Dashboard() {
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<'vault' | 'mesh' | 'verify' | 'profile'>('vault');
   const [showProfileEditor, setShowProfileEditor] = useState(false);
   const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'connecting' | 'disconnected'>('disconnected');
+  const [isActivityExpanded, setIsActivityExpanded] = useState(false);
   
   const { 
     profile, 
@@ -39,6 +41,7 @@ export default function Dashboard() {
   } = useMeshService();
 
   const { backendOnline, syncPending } = usePulseStore();
+  const { documents } = useVault();
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -312,7 +315,7 @@ export default function Dashboard() {
                     <p className="text-[#d4af37] font-semibold uppercase tracking-widest text-lg">Document Vault</p>
                   </div>
                   <div className="text-right bg-gradient-to-br from-[#0f4c3a] to-[#1a5f4a] text-white rounded-2xl p-6 shadow-2xl ring-4 ring-[#d4af37]/20">
-                    <div className="text-5xl font-black">{profile.documents.length}</div>
+                    <div className="text-5xl font-black">{documents.length}</div>
                     <div className="text-sm text-[#d4af37] font-medium uppercase tracking-wider mt-1">ꯄꯨꯜꯄ / Documents</div>
                   </div>
                 </div>
@@ -445,34 +448,78 @@ export default function Dashboard() {
 
       {/* Real-time Activity Feed */}
       {profile && isConnected && (
-        <div className="fixed bottom-8 right-8 w-96 bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border-l-4 border-[#d4af37] p-8 z-50 ring-4 ring-[#0f4c3a]/5">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h3 className="text-xl font-black text-[#0f4c3a]">ꯂꯥꯏꯔꯤꯛ ꯑꯦꯛꯇꯤꯚꯤꯇꯤ</h3>
-              <p className="text-xs text-[#d4af37] uppercase tracking-widest font-semibold">Live Activity</p>
-            </div>
-            <div className="w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></div>
-          </div>
-          <div className="space-y-4 text-sm">
-            <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-transparent rounded-xl p-4">
-              <div className="flex items-center space-x-4">
-                <span className="w-4 h-4 bg-blue-400 rounded-full shadow-md"></span>
-                <span className="text-gray-700 font-semibold text-base">ꯄꯤꯔ ꯑꯣꯟꯂꯥꯏꯟ</span>
+        <div className={`fixed bottom-6 right-6 z-50 transition-all duration-300 ease-in-out ${isActivityExpanded ? 'w-80' : 'w-auto'}`}>
+          {!isActivityExpanded ? (
+            <button
+              onClick={() => setIsActivityExpanded(true)}
+              className="group flex items-center space-x-3 bg-gradient-to-r from-[#0f4c3a] to-[#1a5f4a] text-white px-5 py-3 rounded-full shadow-2xl hover:shadow-[#0f4c3a]/50 hover:-translate-y-1 transition-all border border-[#d4af37]/30 ring-2 ring-[#0f4c3a]/20"
+              aria-label="Expand Live Activity"
+            >
+              <div className="relative">
+                <span className="w-3 h-3 bg-green-400 rounded-full shadow-lg shadow-green-400/50 block"></span>
+                <span className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-75"></span>
               </div>
-              <span className="font-black text-[#0f4c3a] text-2xl">{onlinePeers.length}</span>
-            </div>
-            <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-transparent rounded-xl p-4">
-              <div className="flex items-center space-x-4">
-                <span className="w-4 h-4 bg-[#d4af37] rounded-full shadow-md"></span>
-                <span className="text-gray-700 font-semibold text-base">ꯗꯣꯀꯨꯃꯦꯟ ꯂꯦꯤꯕ</span>
+              <span className="font-semibold text-sm tracking-wide group-hover:text-green-300 transition-colors">
+                ꯃꯦꯁ ꯌꯦꯡꯕ (Mesh Active)
+              </span>
+            </button>
+          ) : (
+            <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border-l-4 border-[#d4af37] p-6 ring-4 ring-[#0f4c3a]/5 transform transition-all duration-300 scale-100 origin-bottom-right">
+              <div className="flex items-start justify-between mb-5">
+                <div>
+                  <h3 className="text-xl font-black text-[#0f4c3a] leading-tight mb-1">ꯂꯥꯏꯔꯤꯛ ꯑꯦꯛꯇꯤꯚꯤꯇꯤ</h3>
+                  <p className="text-xs text-gray-500 font-medium">Live Activity</p>
+                </div>
+                <div className="flex items-center space-x-3 mt-1">
+                  <span className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50"></span>
+                  <button 
+                    onClick={() => setIsActivityExpanded(false)}
+                    className="text-gray-400 hover:text-[#0f4c3a] hover:bg-[#0f4c3a]/10 p-2 rounded-full transition-colors"
+                    aria-label="Minimize Live Activity"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-              <span className="font-black text-[#0f4c3a] text-2xl">{profile.documents.length}</span>
+              
+              <div className="space-y-3 text-sm">
+                {/* Peers Row */}
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-transparent rounded-xl p-3 border border-gray-100/50 transition-colors hover:bg-gray-50/50">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-3 h-3 bg-blue-400 rounded-full shadow-md"></span>
+                    <div>
+                      <span className="text-gray-900 font-bold block leading-none mb-1">ꯄꯤꯔ ꯑꯣꯟꯂꯥꯏꯟ</span>
+                      <span className="text-gray-500 text-[11px] font-medium block">Peers Online</span>
+                    </div>
+                  </div>
+                  <span className="font-black text-[#0f4c3a] text-2xl">{onlinePeers.length}</span>
+                </div>
+                
+                {/* Documents Row */}
+                <div className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-transparent rounded-xl p-3 border border-gray-100/50 transition-colors hover:bg-gray-50/50">
+                  <div className="flex items-center space-x-3">
+                    <span className="w-3 h-3 bg-[#d4af37] rounded-full shadow-md"></span>
+                    <div>
+                      <span className="text-gray-900 font-bold block leading-none mb-1">ꯗꯣꯀꯨꯃꯦꯟ ꯂꯦꯤꯕ</span>
+                      <span className="text-gray-500 text-[11px] font-medium block">Documents Stored</span>
+                    </div>
+                  </div>
+                  <span className="font-black text-[#0f4c3a] text-2xl">{documents.length}</span>
+                </div>
+                
+                {/* Mesh Status Footer Row */}
+                <div className="flex items-center justify-center space-x-3 bg-gradient-to-r from-green-50 to-green-100/50 rounded-xl p-3 border border-green-200/50 mt-4">
+                  <span className="w-2.5 h-2.5 bg-green-500 rounded-full shadow-md shadow-green-500/30 animate-pulse"></span>
+                  <div className="text-center">
+                    <span className="text-gray-900 font-bold block text-sm mb-0.5">ꯃꯦꯁ ꯌꯦꯡꯕ</span>
+                    <span className="text-green-700 font-bold text-[9px] uppercase tracking-widest block">Mesh Active</span>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div className="flex items-center space-x-4 bg-gradient-to-r from-green-50 to-green-100 rounded-xl p-4">
-              <span className="w-4 h-4 bg-green-400 rounded-full animate-pulse shadow-md shadow-green-400/50"></span>
-              <span className="text-gray-700 font-semibold text-base">ꯃꯦꯁ ꯌꯦꯡꯕ (Mesh Active)</span>
-            </div>
-          </div>
+          )}
         </div>
       )}
     </div>

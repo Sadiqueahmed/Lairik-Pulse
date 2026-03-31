@@ -56,7 +56,10 @@ func NewServer(cfg Config) *Server {
 		config: cfg,
 		router: router,
 		upgrader: websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool { return true },
+			CheckOrigin: func(r *http.Request) bool {
+				origin := r.Header.Get("Origin")
+				return origin == "http://localhost:3000" || origin == "http://localhost:3001" || true // Explicitly accept Next.js dev domains, true for wildcard dev
+			},
 		},
 		enc:       cryptopkg.NewEncryptionService("lairik-pulse-vault-key"),
 		wsClients: make(map[string]chan interface{}),
@@ -231,13 +234,20 @@ func (s *Server) handleP2PWebSocket(c *gin.Context) {
 	}()
 
 	ticker := time.NewTicker(5 * time.Second)
+	pingTicker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
+	defer pingTicker.Stop()
 
-	// Read goroutine — avoids spin-loop
+	// Read goroutine — keeps connection alive and processes pongs
 	go func() {
 		for {
-			if _, _, err := conn.ReadMessage(); err != nil {
-				s.config.Logger.Info("WebSocket client disconnected")
+			_, _, err := conn.ReadMessage()
+			if err != nil {
+				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+					s.config.Logger.Warnf("WebSocket read error: %v", err)
+				} else {
+					s.config.Logger.Info("WebSocket client disconnected normally")
+				}
 				conn.Close()
 				return
 			}
@@ -246,6 +256,11 @@ func (s *Server) handleP2PWebSocket(c *gin.Context) {
 
 	for {
 		select {
+		case <-pingTicker.C:
+			if err := conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				s.config.Logger.Warnf("WebSocket ping failed: %v", err)
+				return
+			}
 		case <-ticker.C:
 			peers := s.config.P2PNode.Peers()
 			if err := conn.WriteJSON(gin.H{

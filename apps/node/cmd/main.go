@@ -85,7 +85,8 @@ func main() {
 		Logger:   log,
 	})
 	if err != nil {
-		log.Fatalf("Failed to create IPFS node: %v", err)
+		log.Warnf("Failed to connect to IPFS daemon. Continuing without IPFS storage mesh: %v", err)
+		ipfsNode = nil // Ensuring it stays nil
 	}
 
 	// ── ZKP (compiles circuit at startup) ─────────────────────────────
@@ -119,8 +120,10 @@ func main() {
 	}()
 
 	go func() {
-		if err := ipfsNode.Start(); err != nil {
-			log.Errorf("IPFS node error: %v", err)
+		if ipfsNode != nil {
+			if err := ipfsNode.Start(); err != nil {
+				log.Errorf("IPFS node error: %v", err)
+			}
 		}
 	}()
 
@@ -147,7 +150,9 @@ func main() {
 
 	log.Info("Shutting down...")
 	apiServer.Stop()
-	ipfsNode.Stop()
+	if ipfsNode != nil {
+		ipfsNode.Stop()
+	}
 	p2pNode.Stop()
 	log.Info("Shutdown complete")
 }

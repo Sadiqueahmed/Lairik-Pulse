@@ -13,7 +13,7 @@ interface UseWebSocketOptions {
   url: string;
   onMessage?: (message: WebSocketMessage) => void;
   onConnect?: () => void;
-  onDisconnect?: () => void;
+  onDisconnect?: (wasClean: boolean, attempts: number) => void;
   reconnectInterval?: number;
   maxReconnectAttempts?: number;
 }
@@ -23,8 +23,8 @@ export function useWebSocket({
   onMessage,
   onConnect,
   onDisconnect,
-  reconnectInterval = 3000,
-  maxReconnectAttempts = 5,
+  reconnectInterval = 1000, // Starts at 1s in backoff
+  maxReconnectAttempts = 10,
 }: UseWebSocketOptions) {
   const [isConnected, setIsConnected] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -80,16 +80,19 @@ export function useWebSocket({
         console.log('WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
         setIsConnecting(false);
-        onDisconnectRef.current?.();
+        onDisconnectRef.current?.(event.wasClean, reconnectAttemptsRef.current);
 
         // Attempt reconnection if not intentionally closed
         if (!event.wasClean && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current++;
           console.log(`Reconnecting... Attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`);
           
+          // Exponential backoff: 1s, 2s, 4s, 8s... capped at 30s
+          const backoffDelay = Math.min(reconnectInterval * Math.pow(2, reconnectAttemptsRef.current - 1), 30000);
+          
           reconnectTimerRef.current = setTimeout(() => {
             connect();
-          }, reconnectInterval);
+          }, backoffDelay);
         }
       };
 
